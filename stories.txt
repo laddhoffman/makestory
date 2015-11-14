@@ -1,0 +1,10 @@
+In order to ___
+As a ___
+I want to ___
+
+Scenario #: ___
+Given ___
+And ___
+When ___
+Then ___
+And ___

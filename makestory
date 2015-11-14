@@ -1,0 +1,82 @@
+#!/bin/bash
+
+storyfile=/usr/share/makestory/stories.txt
+if [[ ! -e $storyfile ]]; then
+    storyfile=stories.txt
+fi
+
+scenario_n=0
+
+file_name=output.txt
+rm -f output.txt
+
+read -p "Story: " story
+file_name=${story// /_}.txt
+echo "file name: $file_name"
+if [[ -e "$file_name" ]]; then
+   echo -n "Story file exists. (A)ppend, (O)verwrite, (Q)uit? [A] "
+   read ov 
+   if [[ -z "$ov" ]]; then ov=A; fi
+   rx='^[Qq]'
+   if [[ "$ov" =~ $rx ]]; then
+       exit
+   fi
+   rx="^[Oo]"
+   if [[ "$ov" =~ $rx ]]; then
+       echo "Overwriting $file_name"
+       echo -n > "$file_name"
+   else
+       echo "Appending to $file_name"
+       echo >> "$file_name"
+   fi
+fi
+
+declare -a lines
+while read line; do
+    srx='^\s*$'
+    lines+=("$line")
+done < stories.txt
+
+echo -e "Story: $story\n" >> "$file_name"
+
+idx=0
+scenario_idx=-1
+while (( idx < ${#lines[@]} )); do
+    line="${lines[$idx]}"
+    (( idx++ ))
+    if [[ "$line" =~ $srx ]]; then
+        echo >> "$file_name"
+        continue
+    fi
+    # echo "-- $line --"
+    prompt="${line%%___}"
+    if [[ "$prompt" =~ ^Scenario ]]; then
+        (( scenario_n ++ ))
+        prompt="${prompt/\#/$scenario_n}"
+        scenario_idx=$(( idx - 1 ))
+    fi
+    arx='^And'
+    while true; do
+        read -p "$prompt" completion
+
+        if [[ -z "$completion" ]]; then 
+            if [[ "$prompt" =~ ^Scenario ]]; then
+                # get all the way out
+                break 2
+            fi
+            # just get past this prompt
+            break
+        fi
+
+        echo "${prompt}${completion}" >> "$file_name"
+
+        if [[ ! "$prompt" =~ $arx ]]; then 
+            break
+        fi
+    done
+
+    if (( idx == ${#lines[@]} && scenario_idx >= 0 )); then
+        (( idx = scenario_idx ))
+    fi
+
+done
